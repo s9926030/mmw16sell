@@ -207,6 +207,7 @@
         font-size: 28px;
       }
     }
+    
   </style>
 </head>
 
@@ -239,12 +240,13 @@
       <div class="calc-box">
         <div class="box small">
           <h2 data-i18n="r_title" style="margin:0 0 8px 0;">路人交易</h2>
-          <div style="font-weight:700; margin-bottom:6px;" id="baUp"></div>
-          <label data-i18n="r_sell_label">成交價</label>
-          <input id="sell_r" type="number" step="1" value="280" />
           <label data-i18n="r_markup_label">漲幅 (%)</label>
           <input id="markup_r" type="number" value="300" />
+          <div style="font-weight:700; margin-bottom:6px;" id="baUp"></div>
+          <label data-i18n="b_bonus_label2" style="font-size: 18px;">等同漲幅根據：</label>
           <div id="baUp2" class="result" style="font-weight:400; margin-top:6px;"></div>
+          <label data-i18n="r_sell_label">成交價</label>
+          <input id="sell_r" type="number" step="1" value="280" />
           <div class="result" id="result_r"></div>
         </div>
 
@@ -252,6 +254,7 @@
           <h2 data-i18n="b_title" style="margin:0 0 8px 0;">百業交易</h2>
           <label data-i18n="b_markup_label">漲幅 (%)</label>
           <input id="markup_b" type="number" value="0" />
+          <div style="font-weight:700; margin-bottom:6px;" id="baUpB"></div>
           <label data-i18n="b_tax_label">市買稅 (%)（滿等=1）</label>
           <input id="tax_b" type="number" value="1" step="0.5" />
           <label data-i18n="b_bonus_label">短陌錢加成 (%)（滿等=14.5）</label>
@@ -275,12 +278,15 @@
         "b_title": "百業交易",
         "b_markup_label": "漲幅 (%)",
         "b_tax_label": "市買稅 (%)（滿等=1）",
+        "b_bonus_label2": " <strong>等同漲幅根據： <strong>",
         "b_bonus_label": "短陌錢加成 (%)（滿等=14.5）",
         "ba_equal_cost": "等同百業漲幅 ≈ 請輸入成本",
         "ba_check": "請確認成本、稅率與加成是否正確（不可為 0 ）",
         "sell_info_r": "成交價：{price}<br>實際價格：<span class=\"{cls}\">{income}</span>　市買稅 -11%",
         "sell_info_b": "成交價：{price}<br>實際價格：<span class=\"{cls}\">{income}</span>",
-        "ba_basis": "依據：百業稅率 {tax}%，短陌錢加成 {bonus}%",
+        "ba_basis": " <strong>百業稅率 {tax}%，短陌錢加成 {bonus}% <strong>",
+        "ba_equal_r_from_b": "等同路人漲幅 ≈ 請輸入成本",
+        "ba_basis_r_from_b": "依據：市買稅 {tax}%，短陌錢加成 {bonus}%",
         "ai_label": "製作人：AI"
       },
       "en": {
@@ -293,12 +299,15 @@
         "b_title": "Guild Trade",
         "b_markup_label": "Fluctuation (%)",
         "b_tax_label": "Market Tax (%) (Full=1)",
+        "b_bonus_label2": " <strong>Equivalent Fluctuation Based on： <strong>",
         "b_bonus_label": "Commerce Coins Acquisition Efficiency (%) (Full=14.5)",
         "ba_equal_cost": "Equivalent Guild Fluctuation ≈ please enter cost",
         "ba_check": "Please check cost, tax and bonus are valid (not 0)",
         "sell_info_r": "Sell price: {price}<br>Net price: <span class=\"{cls}\">{income}</span>　Market tax -11%",
         "sell_info_b": "Sell price: {price}<br>Net price: <span class=\"{cls}\">{income}</span>",
-        "ba_basis": "Based on: Market Tax {tax}%, Commerce Coins Acquisition Efficiency {bonus}%",
+        "ba_basis": " <strong><label style:'width:100%';>Market Tax {tax}%<br>Commerce Coins Acquisition Efficiency {bonus}% <strong>",
+        "ba_equal_r_from_b": "Equivalent Passerby Fluctuation ≈ please enter cost",
+        "ba_basis_r_from_b": "Based on: Market Tax {tax}%, Commerce Coins Acquisition Efficiency {bonus}%",
         "ai_label": "Creator：AI"
       }
     };
@@ -485,7 +494,9 @@
 
       const baDiv = document.getElementById('baUp');
       const baDiv2 = document.getElementById('baUp2');
+      const baDivB = document.getElementById('baUpB');
 
+      // 原本：計算路人輸入時等同百業漲幅
       const denom = cost * (1 - tb) * (1 + bb);
       if (cost <= 0 || denom === 0) {
         baDiv.textContent = t('ba_equal_cost');
@@ -499,10 +510,38 @@
           bonus: (bb * 100).toFixed(1)
         });
       }
+
+      // 新增：當百業輸入時，計算等同路人漲幅
+      // 要求：找出 m_r 使 cost*(1+m_r)*(1-tr) = income_b_input_raw
+      // => m_r = income_b_input_raw / (cost*(1-tr)) - 1
+      const denomR = cost * (1 - tr);
+      if (cost <= 0 || denomR === 0) {
+        baDivB.textContent = t('ba_equal_r_from_b');
+      } else {
+        const m_r = (income_b_input_raw / denomR) - 1;
+        const m_r_percent = m_r * 100;
+        // 若無意義（NaN 或 非有限），顯示提示
+        if (!isFinite(m_r_percent)) {
+          baDivB.textContent = t('ba_equal_r_from_b');
+        } else {
+          baDivB.textContent = `${t('ba_equal_r_from_b').split('≈')[0]}≈ ${Math.round(m_r_percent)} %`;
+          // 顯示依據（與路人側顯示一致格式）
+          // 我們把依據放在 baUp2（路人區）下方，保持簡潔
+          // 也可選擇在百業區新增第二行，這裡維持簡單：在 baUpB 下方顯示依據
+          // 但為避免改動太多 DOM，這裡直接在 baUpB title 屬性中保留依據（或可擴充）
+          baDivB.title = t('ba_basis_r_from_b', {
+            tax: (tb * 100).toFixed(1),
+            bonus: (bb * 100).toFixed(1)
+          });
+        }
+      }
     }
 
     ['markup_b', 'tax_b', 'bonus_b'].forEach(id => {
-      document.getElementById(id).addEventListener('input', calc);
+      document.getElementById(id).addEventListener('input', () => {
+        // 當百業輸入時也要觸發 calc（已包含顯示等同路人漲幅）
+        calc();
+      });
     });
 
     /* ---------- 語言切換事件 ---------- */
