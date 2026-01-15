@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>奇術突破材料試算</title>
+<style>
+  body{font-family: "Microsoft JhengHei", system-ui, Arial; background:#f6f8fb; color:#222; padding:18px;}
+  .wrap{max-width:100%;margin:0 auto;background:#fff;padding:18px;border-radius:10px;box-shadow:0 8px 24px rgba(20,30,60,0.06);}
+  h1{margin:0 0 0px 0;}
+  .wrap .muted{
+    display: none;
+  }
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:10px;}
+  .card{background:#fbfdff;border:1px solid #eef2ff;border-radius:10px;padding:2px 0px 2px;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;}
+  .card .disabledOverlay {
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(201, 20, 20, 0.45); color:#fff; font-weight:700; font-size:30px; border-radius:10px;
+    pointer-events:none;
+  }
+  .skill-wrap { position: relative; width:84px; height:84px; display:block; margin-bottom:8px; }
+  .skill-wrap .skill-img {
+    width:100%; height:100%; object-fit:contain; border-radius:8px; display:block; background:#fff; padding:6px; box-sizing:border-box;
+  }
+  .skill-wrap .prohibit {
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:48px; height:48px; border-radius:50%;
+    border:4px solid rgba(220,38,38,0.95); display:flex; align-items:center; justify-content:center;
+    background: rgba(255,255,255,0.0); pointer-events:none; box-sizing:border-box; z-index:3; opacity:0; transition:opacity .12s ease;
+  }
+  .skill-wrap .prohibit::after {
+    content: ""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) rotate(45deg); width:100%; height:4px; background: rgba(220,38,38,0.95); border-radius:2px;
+  }
+  .skill-wrap:hover .prohibit { opacity:1; }
+  .skill-wrap:hover .skill-img { opacity:0.18; transition:opacity .12s ease; }
+  .skill-name{margin-top:0px;margin-bottom:6px;font-weight:700;color:#0f172a;position:relative;z-index:2;pointer-events:none;}
+  .inputs{margin-top:4px;display:flex;gap:6px;align-items:center;}
+  .inputs input{width:56px;padding:6px;border-radius:6px;border:1px solid #dbe7ff;text-align:center;}
+  .small{font-size:13px;color:#475569;margin-top:8px;}
+  .result{margin-top:0px;font-size:13px;color:#0b1220;background:#f8fafc;padding:2px;border-radius:8px;width:100%;}
+  .totals{max-width:100%;margin-top:8px;padding:12px;background:#f1f5ff;border-radius:8px;}
+  .muted{font-size:13px;color:#6b7280;}
+  .materials{margin-top:0px;font-size:13px;color:#0b1220;}
+  .totals .matItem { display:inline-flex; align-items:center; gap:8px; margin-right:12px; }
+  .totals .matItem img { width:30px; height:30px; object-fit:contain; border-radius:6px; background:#fff; padding:0px; border:0px solid #eee; }
+  
+  /* 按鈕區塊樣式調整 */
+  .top-controls { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  .langButtons { display:flex; gap:8px; }
+  .langBtn { padding:6px 10px; border-radius:8px; border:1px solid #d1d5db; background:#fff; cursor:pointer; font-weight:600; }
+  .langBtn.active { background:#0b69ff; color:#fff; border-color:#0b69ff; }
+  .langBtn:focus { outline:3px solid rgba(11,105,255,0.18); }
+  
+  /* 重置按鈕樣式 */
+  .resetBtn { padding:6px 10px; border-radius:8px; border:1px solid #fee2e2; background:#fff1f2; color:#991b1b; cursor:pointer; font-weight:600; margin-left: auto; }
+  .resetBtn:hover { background:#fee2e2; }
+  .sellpageto { padding:6px 10px; border-radius:8px; border:1px solid #e6e2fe; background:#f2f1ff; color:#321b99; cursor:pointer; font-weight:600; margin-left: auto; }
+  .fake-input { display:flex; align-items:center; justify-content:space-between; font-weight:700; gap:6px; margin-top:-2px; }
+  .fake-input .left{ width:70px; height:29px; border-radius:8px; border:1px solid #dbe7ff; background:#fff; box-sizing:border-box; color:#0b1220; padding:2px; }
+  .fake-input .right{ width:70px; height:29px; border-radius:8px; border:1px solid #dbe7ff; background:#fff; box-sizing:border-box; color:#0b1220; padding:2px; }
+  .examplenote { font-size:13px;color:#475569;font-weight:700; }
+  @media (max-width:640px){ .grid{grid-template-columns:repeat(2,1fr);} .top-controls { flex-direction: column; align-items: stretch; } .resetBtn { margin-left: 0; } }
+</style>
+</head>
+<body>
+<div class="wwm16sell" style="position: absolute;top:0px;right:1%">
+    <button id="tosellpage" type="button" class="sellpageto">市買司交易對比網頁</button>
+</div>
+<div class="wrap">
+  <div class="top-controls">
+    <h1 class="title-center">奇術突破材料試算</h1>
+    <div style="display:flex; gap:10px; align-items: center;">
+      <div class="langButtons" role="tablist" aria-label="Language selector">
+        <button id="btnZh" class="langBtn" type="button" aria-pressed="true">中文</button>
+        <button id="btnEn" class="langBtn" type="button" aria-pressed="false">English</button>
+      </div>
+      <button id="btnReset" class="resetBtn" type="button">重置所有資料</button>
+    </div>
+  </div>
+
+  <div class="muted"></div>
+
+  <div id="grid" class="grid" style="margin-top:12px;"></div>
+
+  <div class="totals" id="totalsBox">
+    <div><strong>合計（所有奇術）</strong></div>
+    <div id="ironTotals" class="small"></div>
+    <div id="materialTotals" class="materials"></div>
+  </div>
+</div>
+
+<script>
+function showcss() {
+  var foo = document.getElementById('exampleExcluded');
+  var isHidden = window.getComputedStyle(foo).display === 'none';
+  foo.style.display = isHidden ? 'block' : 'none';
+}
+
+/* 雙語字串 */
+const LANG = {
+  zh: {
+    title: "奇術突破材料試算",
+    subtitle: "請在下方每個奇術輸入目前的「重」與「段」，系統會即時計算到 6重9段 還需要的烏金鐵與突破材料。",
+    skillLabelTier: "重",
+    skillLabelRank: "段",
+    totalsTitleLabel: "總計",
+    totalsTitleShort: "合計（所有奇術）",
+    ironLabel: "烏金鐵（分級）",
+    materialsTitle: "突破材料合計",
+    excludedText: "已排除",
+    eq6Label: "6級烏金鐵",
+    highest_level:"最高級烏金鐵",
+    totalNeedLabel: "總需:",
+    ebobIron: "烏金鐵",
+    lvLabels: {1:"1級",2:"2級",3:"3級",4:"4級",5:"5級",6:"6級"},
+    ownedTitle: "已擁有的材料",
+    ownedNote: "輸入你目前擁有的數量，系統會自動計算還缺多少或已達標。",
+    supportBoxLabelFull: "奇術突破資源箱",
+    enoughText: "已達標",
+    needText: "還需",
+    haveLabel: "擁有",
+    totalMaterialsDeficitLabel: "6種材料總計：",
+    boxesNeededLabel: "需要：",
+    resetBtn: "重置所有資料",
+    resetConfirm: "確定要清除所有輸入資料並重置嗎？",
+    sellpageto: "前往市買司路人 vs 百業交易對比網頁"
+  },
+  en: {
+    title: "Mystic Skills Breakthrough Material Calculation",
+    subtitle: "Enter each skill's Tier and Rank below. The system will calculate required Ebob Iron and breakthrough materials up to Tier 6 Rank 9.",
+    skillLabelTier: "Tier",
+    skillLabelRank: "Rank",
+    totalsTitleLabel: "Total",
+    totalsTitleShort: "Total（All Mystic Skills）",
+    ironLabel: "Ebob Iron (by tier)",
+    materialsTitle: "Breakthrough Materials Total",
+    excludedText: "Excluded",
+    eq6Label: "Lv.6 Ebob Iron",
+    highest_level:"Highest-level Ebob Iron",
+    totalNeedLabel: "Total Need:",
+    ebobIron: "Ebob Iron",
+    lvLabels: {1:"Lv.1",2:"Lv.2",3:"Lv.3",4:"Lv.4",5:"Lv.5",6:"Lv.6"},
+    ownedTitle: "Owned Materials",
+    ownedNote: "Enter quantities you already own; the system will compute what's still needed or if you're covered.",
+    supportBoxLabelFull: "Mystic Skills Breakthrough Support Box",
+    enoughText: "Enough",
+    needText: "Need",
+    haveLabel: "Have",
+    totalMaterialsDeficitLabel: "Total Need (6 Materials)：",
+    boxesNeededLabel: "Needed:",
+    resetBtn: "Reset All Data",
+    resetConfirm: "Are you sure you want to clear all data and reset?",
+    sellpageto: "Passerby vs Guild Price Fluctuation Comparison"
+  }
+};
+
+/* 基本資料 */
+const skills = [
+  {zh:"太極", en:"Tai Chi", img:"image/40.png"},
+  {zh:"金玉手", en:"Meridian Touch", img:"image/41.png"},
+  {zh:"攝星拿月", en:"Celestial Seize", img:"image/42.png"},
+  {zh:"凌雲踏", en:"Cloud Steps", img:"image/43.png"},
+  {zh:"獅吼正聲", en:"Lion's Roar", img:"image/44.png"},
+  {zh:"金蟾騰躍", en:"Leaping Toad", img:"image/45.png"},
+  {zh:"百鬼打穴手", en:"Ghost Bind", img:"image/46.png"},
+  {zh:"韋陀正法", en:"Guardian Palm", img:"image/47.png"},
+  {zh:"流星墜火", en:"Flaming Meteor", img:"image/48.png"},
+  {zh:"鷹爪連鑿", en:"Talon Strike", img:"image/49.png"},
+  {zh:"藥叉破魔", en:"Yaksha Rush", img:"image/50.png"},
+  {zh:"自在無礙", en:"Free Morph", img:"image/51.png"},
+  {zh:"狗嘴奪食", en:"Wolflike Frenzy", img:"image/52.png"},
+  {zh:"騎龍回馬", en:"Soaring Spin", img:"image/53.png"},
+  {zh:"神龍吐火", en:"Dragon's Breath", img:"image/54.png"},
+  {zh:"太白醉月", en:"Drunken Poet", img:"image/55.png"},
+  {zh:"葉龍驤首", en:"Dragon Head", img:"image/56.png"},
+  {zh:"紅塵障目", en:"Blinding Mist", img:"image/57.png"},
+  {zh:"清風霽月", en:"Serene Breeze", img:"image/58.png"},
+  {zh:"無相金身", en:"Golden Body", img:"image/59.png"},
+  {zh:"陰陽迷蹤步", en:"Ghostly Steps", img:"image/60.png"},
+  {zh:"以鵝之鳴", en:"Honking Havoc", img:"image/61.png"},
+  {zh:"凌虛一指", en:"Touch of Death", img:"image/62.png"}
+];
+
+const perSeg = {1:2,2:4,3:10,4:20,5:32,6:48};
+const breakthroughMaterialsCount = {1:5,2:15,3:18,4:28,5:35};
+const materialMap = {
+  "唐宮羽楹": ["金玉手","凌雲踏","金蟾騰躍","清風霽月","凌虛一指"],
+  "惡相果": ["太極","攝星拿月","鷹爪連鑿","太白醉月","紅塵障目","以鵝之鳴"],
+  "佛淚鬚": ["獅吼正聲","韋陀正法","流星墜火","藥叉破魔","自在無礙"],
+  "玉樓珠": ["百鬼打穴手","狗嘴奪食","神龍吐火","葉龍驤首","無相金身"],
+  "耶悉蕊": ["騎龍回馬"],
+  "寒菌絨": ["陰陽迷蹤步"]
+};
+const skillToMaterial = {};
+for (const mat in materialMap) materialMap[mat].forEach(s=>skillToMaterial[s]=mat);
+
+const materialInfo = {
+  "唐宮羽楹": {en:"Beauty's Plume", img:"image/91.png"},
+  "惡相果": {en:"Vicious Fruit", img:"image/92.png"},
+  "佛淚鬚": {en:"Buddha's Tear Root", img:"image/93.png"},
+  "玉樓珠": {en:"Jade Tower Pearl", img:"image/94.png"},
+  "耶悉蕊": {en:"Jasmine Stamen", img:"image/95.png"},
+  "寒菌絨": {en:"Frost Mushroom Mycelium", img:"image/96.png"}
+};
+
+/* 狀態與 DOM 參考 */
+let currentLang = localStorage.getItem('mystic_lang') || 'zh';
+const grid = document.getElementById('grid');
+const totalsBox = document.getElementById('totalsBox');
+const entries = [];
+
+// 資料儲存功能
+function saveData() {
+    const skillsData = entries.map(e => ({
+        rank: e.rank,
+        stage: e.stage,
+        excluded: e.excluded
+    }));
+    localStorage.setItem('mystic_skills_data', JSON.stringify(skillsData));
+
+    const ownedData = { irons: {}, mats: {} };
+    for(let i=1; i<=6; i++) {
+        const el = document.getElementById(`ownedIron${i}`);
+        if(el) ownedData.irons[i] = el.value;
+    }
+    Object.keys(materialInfo).forEach(mat => {
+        const el = document.getElementById(`ownedMat_${mat}`);
+        if(el) ownedData.mats[mat] = el.value;
+    });
+    localStorage.setItem('mystic_owned_data', JSON.stringify(ownedData));
+}
+
+function loadSkillsData() {
+    const json = localStorage.getItem('mystic_skills_data');
+    return json ? JSON.parse(json) : null;
+}
+
+function loadOwnedData() {
+    const json = localStorage.getItem('mystic_owned_data');
+    return json ? JSON.parse(json) : { irons: {}, mats: {} };
+}
+
+/* 建立技能卡片 */
+function buildCards() {
+  grid.innerHTML = '';
+  const savedSkills = loadSkillsData(); 
+
+  skills.forEach((s, idx) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const saved = savedSkills && savedSkills[idx] ? savedSkills[idx] : { rank: 1, stage: 0, excluded: false };
+
+    const imgHtml = s.img ? `
+      <div class="skill-wrap" aria-hidden="false">
+        <img src="${s.img}" alt="${s.zh}" class="skill-img" data-idx="${idx}" onerror="this.style.opacity=0.25;">
+        <div class="prohibit" aria-hidden="true"></div>
+      </div>
+    ` : `<div class="skill-wrap"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#6b7280;">${s[currentLang].slice(0,2)}</div></div>`;
+
+    card.innerHTML = `
+      ${imgHtml}
+      <div class="skill-name" data-name>${s[currentLang]}</div>
+      <div class="inputs">
+        <input type="number" min="1" max="6" value="${saved.rank}" class="rank" title="${LANG[currentLang].skillLabelTier}">
+        <input type="number" min="0" max="9" value="${saved.stage}" class="stage" title="${LANG[currentLang].skillLabelRank}">
+      </div>
+      <div class="result" data-idx="${idx}"></div>
+      <div class="disabledOverlay" style="display:${saved.excluded ? 'flex' : 'none'};"><br><br>${LANG[currentLang].excludedText}</div>
+    `;
+    grid.appendChild(card);
+
+    entries[idx] = {nameZh:s.zh, nameEn:s.en, rank:saved.rank, stage:saved.stage, result:null, excluded:saved.excluded, cardElement:card};
+    if(saved.excluded) card.classList.add('disabled');
+
+    const rankInput = card.querySelector('.rank');
+    const stageInput = card.querySelector('.stage');
+    const resultDiv = card.querySelector('.result');
+    const imgEl = card.querySelector('.skill-img');
+    const overlay = card.querySelector('.disabledOverlay');
+
+    function recompute() {
+      let rank = parseInt(rankInput.value,10) || 1;
+      let stage = parseInt(stageInput.value,10) || 0;
+      if (rank < 1) rank = 1; if (rank > 6) rank = 6;
+      if (stage < 0) stage = 0; if (stage > 9) stage = 9;
+      rankInput.value = rank; stageInput.value = stage;
+      entries[idx].rank = rank; entries[idx].stage = stage;
+
+      const fullResult = calcToMaxForSkill(entries[idx].nameZh, rank, stage, false);
+      const mats = fullResult.materials;
+      let matHtml = '';
+      if (Object.keys(mats).length === 0) {
+        matHtml = '';
+      } else {
+        const parts = Object.entries(mats).map(([m,c]) => {
+          const info = materialInfo[m] || {};
+          const imgSrc = info.img || 'image/placeholder.png';
+          const label = currentLang === 'zh' ? m : (info.en || m);
+          return `<div style="display:inline-flex;align-items:center;gap:6px;margin-right:8px;">
+                    <img src="${imgSrc}" alt="${label}" style="width:30px;height:30px;object-fit:contain;border-radius:6px;background:#fff;padding:3px;border:0px solid #eee;" onerror="this.style.opacity=0.25;">
+                    <div style="font-size:13px;color:#0b1220;">${label} × ${c}</div>
+                  </div>`;
+        });
+        matHtml = parts.join('');
+      }
+      resultDiv.innerHTML = `<div class="materials" style="margin-top:0px;">${matHtml}</div>`;
+
+      if (entries[idx].excluded) {
+        const ironsZero = {1:0,2:0,3:0,4:0,5:0,6:0};
+        entries[idx].result = {irons: ironsZero, total6Equivalent: 0, materials: {}};
+      } else {
+        entries[idx].result = fullResult;
+      }
+
+      updateTotals();
+      saveData();
+    }
+
+    rankInput.addEventListener('input', recompute);
+    stageInput.addEventListener('input', recompute);
+
+    if (imgEl) {
+      imgEl.style.cursor = 'pointer';
+      imgEl.addEventListener('click', () => {
+        entries[idx].excluded = !entries[idx].excluded;
+        if (entries[idx].excluded) {
+          card.classList.add('disabled');
+          overlay.style.display = 'flex';
+        } else {
+          card.classList.remove('disabled');
+          overlay.style.display = 'none';
+        }
+        recompute();
+      });
+    }
+
+    recompute();
+  });
+
+  /* 模擬卡片 */
+  (function appendMockCard() {
+    if (document.getElementById('mockSkillCard')) return;
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.id = 'mockSkillCard';
+
+    const imgHtml = `
+      <div class="skill-wrap" aria-hidden="false">
+        <img src="image/100.png" alt="範例" onclick="showcss()" class="skill-img" style="width:84px;height:84px;padding:6px;object-fit:contain;border-radius:8px;cursor: pointer;" onerror="this.style.opacity=0.25;">
+        <div class="prohibit" aria-hidden="true"></div>
+      </div>
+    `;
+
+    card.innerHTML = `
+      ${imgHtml}
+      <div class="skill-name" data-name id="mockSkillName">${currentLang === 'zh' ? '範例' : 'Example'}</div>
+      <div style="margin-top:6px;">
+        <div class="fake-input" id="mockFakeInput">
+          <div class="left" id="mockLeftLabel">${currentLang === 'zh' ? '重' : 'Tier'}</div>
+          <div class="right" id="mockRightLabel">${currentLang === 'zh' ? '段' : 'Rank'}</div>
+        </div>
+      </div>
+      <div class="result" id="mockResult" style="min-height:36px;padding-top:8px;"></div>
+      <div class="disabledOverlay" id="exampleExcluded" style="display:none"><br><br><br>${LANG[currentLang].excludedText}</div>
+    `;
+    grid.appendChild(card);
+    const nameDiv = card.querySelector('#mockSkillName');
+    const resultDiv = card.querySelector('#mockResult');
+
+    function updateMock() {
+      const zhNote = '計算採6重9段為最高';
+      const enNote = 'Calculation assumes Tier 6 Rank 9 as the maximum.';
+      const note = currentLang === 'zh' ? zhNote : enNote;
+      nameDiv.textContent = currentLang === 'zh' ? '範例' : 'Example';
+      resultDiv.innerHTML = `<div class="examplenote">${note}</div>`;
+    }
+    updateMock();
+  })();
+}
+
+function calcToMaxForSkill(skillName, rank, stage, excluded) {
+  const irons = {1:0,2:0,3:0,4:0,5:0,6:0};
+  const materials = {};
+  let total6Equivalent = 0;
+  if (excluded) return {irons, total6Equivalent, materials};
+  for (let lvl = rank; lvl <= 6; lvl++) {
+    if (lvl < 6) {
+      const neededUnits = (lvl === rank) ? (10 - stage) : 10;
+      const needIron = neededUnits * perSeg[lvl];
+      irons[lvl] += needIron;
+      total6Equivalent += needIron;
+      if (neededUnits > 0) {
+        const matCount = breakthroughMaterialsCount[lvl] || 0;
+        const matName = skillToMaterial[skillName] || null;
+        if (matName && matCount>0) materials[matName] = (materials[matName]||0) + matCount;
+      }
+    } else {
+      const neededSeg = (lvl === rank) ? (9 - stage) : 9;
+      const needIron = Math.max(0, neededSeg) * perSeg[6];
+      irons[6] += needIron;
+      total6Equivalent += needIron;
+    }
+    stage = 0;
+  }
+  return {irons, total6Equivalent, materials};
+}
+
+function ensureOwnedInputs() {
+  if (document.getElementById('ownedMaterialsBox')) return;
+  const box = document.createElement('div');
+  box.id = 'ownedMaterialsBox';
+  box.style.marginTop = '12px';
+  box.style.padding = '12px';
+  box.style.background = '#fff7ed';
+  box.style.borderRadius = '8px';
+  box.innerHTML = `
+    <div style="font-weight:700;margin-bottom:6px;" id="ownedTitle">${LANG[currentLang].ownedTitle}</div>
+    <div style="font-size:13px;color:#475569;margin-bottom:8px;" id="ownedNote">${LANG[currentLang].ownedNote}</div>
+    <div id="ownedInputsRow"></div>
+    <div style="margin-top:0px;font-size:13px;color:#334155;" id="ownedResult"></div>
+  `;
+  totalsBox.appendChild(box);
+  buildOwnedInputs();
+}
+
+function buildOwnedInputs() {
+  const row = document.getElementById('ownedInputsRow');
+  row.innerHTML = '';
+  
+  const savedData = loadOwnedData(); 
+
+  const container = document.createElement('div');
+  container.style.display = 'flex';
+  container.style.alignItems = 'center';
+  container.style.gap = '12px';
+  container.style.flexWrap = 'wrap';
+  container.style.marginBottom = '0px';
+
+  const imgWrap = document.createElement('div');
+  imgWrap.style.display = 'flex';
+  imgWrap.style.alignItems = 'center';
+  imgWrap.style.justifyContent = 'center';
+  imgWrap.innerHTML = `<img src="image/80.png" alt="${LANG[currentLang].ebobIron}" style="width:30px;height:30px;object-fit:contain;border-radius:6px;background:#fff;padding:0px;border:0px solid #eee;" onerror="this.style.opacity=0.25;">`;
+  container.appendChild(imgWrap);
+
+  const ironsRow = document.createElement('div');
+  ironsRow.style.display = 'flex';
+  ironsRow.style.gap = '8px';
+  ironsRow.style.flexWrap = 'wrap';
+  ironsRow.style.alignItems = 'center';
+
+  const lvLabels = LANG[currentLang].lvLabels;
+  for (let i=1;i<=6;i++) {
+    const wrap = document.createElement('div');
+    wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center';
+    wrap.style.minWidth='84px';
+    const val = savedData.irons[i] || 0; 
+    wrap.innerHTML = `<label style="font-size:13px;">${lvLabels[i]}</label><input type="number" min="0" value="${val}" id="ownedIron${i}" style="width:84px;padding:6px;border-radius:6px;border:1px solid #e6e9ef;text-align:center;">`;
+    ironsRow.appendChild(wrap);
+  }
+
+  container.appendChild(ironsRow);
+  row.appendChild(container);
+
+  const matRow = document.createElement('div');
+  matRow.style.display = 'flex';
+  matRow.style.flexWrap = 'wrap';
+  matRow.style.gap = '8px';
+  Object.keys(materialInfo).forEach(mat => {
+    const label = currentLang === 'zh' ? mat : materialInfo[mat].en;
+    const wrap = document.createElement('div');
+    wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center';
+    wrap.style.minWidth='140px';
+    const val = savedData.mats[mat] || 0; 
+    wrap.innerHTML = `<label style="font-size:13px;">${label}</label><input type="number" min="0" value="${val}" id="ownedMat_${mat}" style="width:140px;padding:6px;border-radius:6px;border:1px solid #e6e9ef;text-align:center;">`;
+    matRow.appendChild(wrap);
+  });
+  row.appendChild(matRow);
+
+  const summaryWrap = document.createElement('div');
+  summaryWrap.style.marginTop = '10px';
+  summaryWrap.style.padding = '8px';
+  summaryWrap.style.background = '#eef2ff';
+  summaryWrap.style.borderRadius = '8px';
+  summaryWrap.style.fontSize = '14px';
+  summaryWrap.style.color = '#0b1220';
+  summaryWrap.id = 'ownedSummaryBoxStatic';
+  summaryWrap.innerHTML = `
+  <div style="font-weight:700;margin-bottom:6px;" id="totalMaterialsLabel">
+    ${LANG[currentLang].totalMaterialsDeficitLabel}- <span id="totalMaterialsRemainingVal">0</span>
+  </div>
+  <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:6px;">
+    <img src="image/90.png" alt="${LANG[currentLang].supportBoxLabelFull}"
+         style="width:50px;height:50px;object-fit:contain;border-radius:6px;background:#fff;" onerror="this.style.opacity=0.25;">
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="font-size:13px;color:#0b1220;">
+        <strong>${LANG[currentLang].supportBoxLabelFull}</strong>
+      </div>
+      <div id="boxesNeededSummary" style="font-size:13px;color:#0b1220;">
+        ${LANG[currentLang].boxesNeededLabel} 0 ${currentLang==='zh' ? '箱' : 'boxes'}
+      </div>
+    </div>
+  </div>
+`;
+  row.appendChild(summaryWrap);
+
+  const inputs = row.querySelectorAll('input');
+  inputs.forEach(inp => inp.addEventListener('input', () => {
+    updateTotals();
+    saveData(); 
+  }));
+}
+
+function computeIronDeficit(totalIrons, ownedIrons) {
+  const need = {};
+  const surplus = {};
+  for (let i = 1; i <= 6; i++) {
+    const t = totalIrons[i] || 0;
+    const o = ownedIrons[i] || 0;
+    need[i] = Math.max(0, t - o);
+    surplus[i] = Math.max(0, o - t);
+  }
+
+  for (let lvl = 6; lvl >= 2; lvl--) {
+    let avail = surplus[lvl];
+    if (avail <= 0) continue;
+    for (let lower = lvl - 1; lower >= 1 && avail > 0; lower--) {
+      const use = Math.min(avail, need[lower]);
+      if (use > 0) {
+        need[lower] -= use;
+        avail -= use;
+      }
+    }
+    surplus[lvl] = avail;
+  }
+  return need;
+}
+
+function applySupportBoxes(deficits, boxes) {
+  const res = {...deficits};
+  let b = boxes || 0;
+  while (b > 0) {
+    let maxMat = null;
+    let maxVal = 0;
+    for (const m in res) {
+      if (res[m] > maxVal) { maxVal = res[m]; maxMat = m; }
+    }
+    if (!maxMat || maxVal <= 0) break;
+    res[maxMat] = Math.max(0, res[maxMat] - 3);
+    b--;
+  }
+  return res;
+}
+
+function updateTotals() {
+  const totalIrons = {1:0,2:0,3:0,4:0,5:0,6:0};
+  const totalMaterials = {};
+  let total6eq = 0;
+  entries.forEach(e => {
+    const r = e.result;
+    if (!r) return;
+    Object.keys(totalIrons).forEach(k => totalIrons[k] += (r.irons[k]||0));
+    Object.entries(r.materials).forEach(([m,c]) => totalMaterials[m] = (totalMaterials[m]||0) + c);
+    total6eq += r.total6Equivalent;
+  });
+
+  if(!document.getElementById('ownedMaterialsBox')) ensureOwnedInputs();
+
+  const ownedIrons = {};
+  for (let i=1;i<=6;i++) {
+    const el = document.getElementById(`ownedIron${i}`);
+    const v = el ? (parseInt(el.value,10) || 0) : 0;
+    ownedIrons[i] = v;
+  }
+  const ownedMaterials = {};
+  Object.keys(materialInfo).forEach(mat => {
+    const el = document.getElementById(`ownedMat_${mat}`);
+    const v = el ? (parseInt(el.value,10) || 0) : 0;
+    ownedMaterials[mat] = v;
+  });
+
+  const ironDeficit = computeIronDeficit(totalIrons, ownedIrons);
+  const remaining6eq = Object.values(ironDeficit).reduce((s,v)=>s+v,0);
+
+  const lvLabels = LANG[currentLang].lvLabels;
+  const ironPartsArr = Object.keys(ironDeficit).map(k => {
+    const kNum = parseInt(k,10);
+    return `<strong style="color:#000">${lvLabels[kNum]}</strong> : ${ironDeficit[kNum]}`;
+  });
+  const ironPartsText = ironPartsArr.join('　');
+  const totalsTitleEl = totalsBox.querySelector('div strong') || totalsBox.querySelector('div');
+  if (totalsTitleEl) totalsTitleEl.textContent = LANG[currentLang].totalsTitleShort;
+  document.getElementById('ironTotals').innerHTML = `<img src="image/80.png" alt="${LANG[currentLang].ebobIron}" style="width:30px;height:30px;vertical-align:middle;margin-right:8px;object-fit:contain;border-radius:6px;background:#fff;padding:0px;border:0px solid #eee;" onerror="this.style.opacity=0.25;"> ${LANG[currentLang].ironLabel}: ${ironPartsText}　<strong style="color:#000">${LANG[currentLang].totalsTitleLabel}：${remaining6eq}</strong>`;
+
+  const matDeficits = {};
+  Object.keys(materialInfo).forEach(mat => {
+    matDeficits[mat] = Math.max(0, (totalMaterials[mat]||0) - (ownedMaterials[mat]||0));
+  });
+
+  const ownedBoxes = 0;
+  const matAfterBoxes = applySupportBoxes(matDeficits, ownedBoxes);
+  const totalMaterialsRemaining = Object.values(matAfterBoxes).reduce((s,v)=>s+v,0);
+  const boxesNeeded = Math.max(0, Math.ceil(totalMaterialsRemaining / 3));
+
+  const matBox = document.getElementById('materialTotals');
+  matBox.innerHTML = '';
+  
+  if (Object.entries(matAfterBoxes).length === 0) {
+    const empty = document.createElement('div');
+    empty.textContent = `${LANG[currentLang].materialsTitle}: -`;
+    matBox.appendChild(empty);
+  } else {
+    const row = document.createElement('div');
+    row.style.marginTop = '8px';
+    Object.entries(matAfterBoxes).forEach(([mat, cnt]) => {
+      const item = document.createElement('div');
+      item.className = 'matItem';
+      const img = document.createElement('img');
+      img.src = (materialInfo[mat] && materialInfo[mat].img) ? materialInfo[mat].img : 'image/placeholder.png';
+      img.alt = mat;
+      img.onerror = function(){ this.style.opacity=0.25; };
+      const txt = document.createElement('div');
+      const matLabel = currentLang === 'zh' ? mat : (materialInfo[mat] ? materialInfo[mat].en : mat);
+      txt.textContent = `${matLabel} × ${cnt}`;
+      item.appendChild(img);
+      item.appendChild(txt);
+      row.appendChild(item);
+    });
+    matBox.appendChild(row);
+  }
+
+  const totalMaterialsRemainingVal = document.getElementById('totalMaterialsRemainingVal');
+  if (totalMaterialsRemainingVal) totalMaterialsRemainingVal.textContent = totalMaterialsRemaining;
+  const boxesNeededSummary = document.getElementById('boxesNeededSummary');
+  if (boxesNeededSummary) boxesNeededSummary.textContent = `${LANG[currentLang].boxesNeededLabel} ${boxesNeeded} ${currentLang==='zh' ? '箱' : 'boxes'}`;
+}
+
+const btnZh = document.getElementById('btnZh');
+const btnEn = document.getElementById('btnEn');
+const btnReset = document.getElementById('btnReset');
+const btnSellPage = document.getElementById('tosellpage');
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('mystic_lang', lang);
+
+  if (lang === 'zh') {
+    btnZh.classList.add('active'); btnZh.setAttribute('aria-pressed','true');
+    btnEn.classList.remove('active'); btnEn.setAttribute('aria-pressed','false');
+  } else {
+    btnEn.classList.add('active'); btnEn.setAttribute('aria-pressed','true');
+    btnZh.classList.remove('active'); btnZh.setAttribute('aria-pressed','false');
+  }
+  
+  document.querySelector('.wrap h1').textContent = LANG[currentLang].title;
+  const muted = document.querySelector('.wrap .muted');
+  if (muted) muted.textContent = LANG[currentLang].subtitle;
+  if(btnReset) btnReset.textContent = LANG[currentLang].resetBtn;
+  
+  // 新增：更新交易按鈕文字
+  if(btnSellPage) btnSellPage.textContent = LANG[currentLang].sellpageto;
+
+  buildCards();
+  const ownedBox = document.getElementById('ownedMaterialsBox');
+  if (ownedBox) ownedBox.remove();
+  ensureOwnedInputs();
+  updateTotals();
+}
+
+btnZh.addEventListener('click', () => setLang('zh'));
+btnEn.addEventListener('click', () => setLang('en'));
+
+btnReset.addEventListener('click', () => {
+    if(confirm(LANG[currentLang].resetConfirm)) {
+        localStorage.removeItem('mystic_skills_data');
+        localStorage.removeItem('mystic_owned_data');
+        location.reload();
+    }
+});
+
+// 交易按鈕的連結 (目前是空連結，請替換成真實網址)
+if(btnSellPage) {
+    btnSellPage.addEventListener('click', () => {
+        window.location.href = 'https://s9926030.github.io/mmw16sell.github.io/sell.html'; // 請將 # 換成目標網址
+    });
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.altKey && (e.key === 'l' || e.key === 'L')) {
+    setLang(currentLang === 'zh' ? 'en' : 'zh');
+  }
+});
+
+setLang(currentLang);
+</script>
+
+</body>
+</html>
