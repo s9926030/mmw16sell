@@ -291,7 +291,7 @@ function buildCards() {
       ${imgHtml}
       <div class="skill-name" data-name>${s[currentLang]}</div>
       <div class="inputs">
-        <input type="number" min="1" max="6" value="${saved.rank}" class="rank" title="${LANG[currentLang].skillLabelTier}">
+        <input type="number" min="0" max="6" value="${saved.rank}" class="rank" title="${LANG[currentLang].skillLabelTier}">
         <input type="number" min="0" max="9" value="${saved.stage}" class="stage" title="${LANG[currentLang].skillLabelRank}">
       </div>
       <div class="result" data-idx="${idx}"></div>
@@ -309,9 +309,9 @@ function buildCards() {
     const overlay = card.querySelector('.disabledOverlay');
 
     function recompute() {
-      let rank = parseInt(rankInput.value,10) || 1;
+      let rank = parseInt(rankInput.value,10) || 0;
       let stage = parseInt(stageInput.value,10) || 0;
-      if (rank < 1) rank = 1; if (rank > 6) rank = 6;
+      if (rank < 0) rank = 0; if (rank > 6) rank = 6;
       if (stage < 0) stage = 0; if (stage > 9) stage = 9;
       rankInput.value = rank; stageInput.value = stage;
       entries[idx].rank = rank; entries[idx].stage = stage;
